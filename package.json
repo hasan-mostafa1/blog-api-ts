@@ -14,7 +14,7 @@
   "keywords": [],
   "author": "hasan_mostafa <hasanalimostafa1@gmail.com>",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/hasan-mostafa1/backend-template/issues"
   },
@@ -38,6 +38,11 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "prisma": "^7.5.0"
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
+    "prisma": "^7.5.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
   }
 }
