@@ -1,8 +1,17 @@
-const { body, validationResult, query, param } = require("express-validator");
-const fs = require("node:fs/promises");
-const { prisma } = require("../lib/prisma");
+import { body, validationResult, query, param } from "express-validator";
+import { prisma } from "../lib/prisma.js";
+import type { Request, Response, NextFunction, Handler } from "express";
 
-const validateComment = [
+const validateResult: Handler = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+  next();
+};
+
+export const validateComment = [
   body("content")
     .exists()
     .withMessage("content is required")
@@ -11,23 +20,17 @@ const validateComment = [
     .trim()
     .notEmpty()
     .withMessage("content can't be empty"),
-  async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  validateResult,
 ];
 
-const validateQueryString = [
+export const validateQueryString = [
   query("sort")
     .optional()
     .isString()
     .withMessage("sort must be a string")
     .custom((value) => {
       const allowedSortFields = ["likes", "createdAt"];
-      value.split(",").forEach((item) => {
+      value.split(",").forEach((item: string) => {
         if (item.at(0) !== "-" && item.at(0) !== "+") {
           throw new Error(
             "Invalid sort order direction! use '+' and '-' signs before columns names to indicate 'asc' and 'desc' directions.",
@@ -52,16 +55,10 @@ const validateQueryString = [
     .withMessage("Limit must be an integer between 1 and 100")
     .toInt(),
   ,
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  validateResult,
 ];
 
-const commentExists = [
+export const commentExists = [
   param("commentId")
     .exists()
     .withMessage("comment id is required")
@@ -81,7 +78,7 @@ const commentExists = [
       req.comment = comment;
       return true;
     }),
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(404).json({ errors: errors.array() });
@@ -89,9 +86,3 @@ const commentExists = [
     next();
   },
 ];
-
-module.exports = {
-  validateComment,
-  validateQueryString,
-  commentExists,
-};

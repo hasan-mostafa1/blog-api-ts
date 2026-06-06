@@ -1,14 +1,18 @@
-const {
-  body,
-  validationResult,
-  query,
-  check,
-  param,
-} = require("express-validator");
-const fs = require("node:fs/promises");
-const { prisma } = require("../lib/prisma");
+import { body, validationResult, query, check, param } from "express-validator";
+import fs from "node:fs/promises";
+import { prisma } from "../lib/prisma.js";
+import type { Request, Response, NextFunction, Handler } from "express";
 
-const validatePost = [
+const validateResult: Handler = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+  next();
+};
+
+export const validatePost = [
   body("title")
     .exists()
     .withMessage("title is required")
@@ -52,7 +56,7 @@ const validatePost = [
     .isBoolean()
     .withMessage("published must be a boolean")
     .toBoolean(),
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       // Delete uploaded file if validation fails
@@ -65,7 +69,7 @@ const validatePost = [
   },
 ];
 
-const validateQueryString = [
+export const validateQueryString = [
   query("sq")
     .optional()
     .isString()
@@ -81,7 +85,7 @@ const validateQueryString = [
     .withMessage("sort must be a string")
     .custom((value) => {
       const allowedSortFields = ["likes", "createdAt", "updatedAt"];
-      value.split(",").forEach((item) => {
+      value.split(",").forEach((item: string) => {
         if (item.at(0) !== "-" && item.at(0) !== "+") {
           throw new Error(
             "Invalid sort order direction! use '+' and '-' signs before columns names to indicate 'asc' and 'desc' directions.",
@@ -106,16 +110,10 @@ const validateQueryString = [
     .withMessage("Limit must be an integer between 1 and 100")
     .toInt(),
   ,
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  validateResult,
 ];
 
-const postExists = [
+export const postExists = [
   param("postId")
     .exists()
     .withMessage("post id is required")
@@ -135,7 +133,7 @@ const postExists = [
       req.post = post;
       return true;
     }),
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(404).json({ errors: errors.array() });
@@ -144,7 +142,7 @@ const postExists = [
   },
 ];
 
-const publishedPostExists = [
+export const publishedPostExists = [
   param("postId")
     .exists()
     .withMessage("post id is required")
@@ -164,7 +162,7 @@ const publishedPostExists = [
       req.post = post;
       return true;
     }),
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(404).json({ errors: errors.array() });
@@ -172,10 +170,3 @@ const publishedPostExists = [
     next();
   },
 ];
-
-module.exports = {
-  validatePost,
-  validateQueryString,
-  postExists,
-  publishedPostExists,
-};

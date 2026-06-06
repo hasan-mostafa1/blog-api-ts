@@ -1,13 +1,18 @@
-const {
-  body,
-  validationResult,
-  check,
-  query,
-  param,
-} = require("express-validator");
-const { prisma } = require("../lib/prisma");
+import { body, validationResult, check, query, param } from "express-validator";
+import { prisma } from "../lib/prisma.js";
+import type { Request, Response, NextFunction, Handler } from "express";
+import fs from "node:fs/promises";
 
-const validateSignup = [
+const validateResult: Handler = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+  next();
+};
+
+export const validateSignup = [
   body("firstName")
     .exists()
     .withMessage("first name is required")
@@ -58,16 +63,10 @@ const validateSignup = [
       }
       return true;
     }),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  validateResult,
 ];
 
-const validateLogin = [
+export const validateLogin = [
   body("email")
     .exists()
     .withMessage("email is required")
@@ -82,16 +81,10 @@ const validateLogin = [
     .trim()
     .notEmpty()
     .withMessage("password can't be empty"),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  validateResult,
 ];
 
-const validateProfileImage = [
+export const validateProfileImage = [
   check("profileImage").custom((value, { req }) => {
     if (!req.file) {
       throw new Error("File is required");
@@ -108,20 +101,21 @@ const validateProfileImage = [
     }
     return true;
   }),
-  async (req, res, next) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       // Delete uploaded file if validation fails
       if (req.file) {
         await fs.unlink(req.file.path);
       }
-      return res.status(400).json({ errors: errors.array() });
+      res.status(400).json({ errors: errors.array() });
+      return;
     }
     next();
   },
 ];
 
-const validateQueryString = [
+export const validateQueryString = [
   query("sq")
     .optional()
     .isString()
@@ -136,7 +130,7 @@ const validateQueryString = [
     .withMessage("sort must be a string")
     .custom((value) => {
       const allowedSortFields = ["firstName", "lastName"];
-      value.split(",").forEach((item) => {
+      value.split(",").forEach((item: string) => {
         if (item.at(0) !== "-" && item.at(0) !== "+") {
           throw new Error(
             "Invalid sort order direction! use '+' and '-' signs before columns names to indicate 'asc' and 'desc' directions.",
@@ -159,16 +153,10 @@ const validateQueryString = [
     .isInt({ min: 1, max: 100 })
     .withMessage("Limit must be an integer between 1 and 100"),
   ,
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  validateResult,
 ];
 
-const userExists = [
+export const userExists = [
   param("userId")
     .exists()
     .withMessage("user id is required")
@@ -185,7 +173,7 @@ const userExists = [
       req.selectedUser = user;
       return true;
     }),
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(404).json({ errors: errors.array() });
@@ -193,11 +181,3 @@ const userExists = [
     next();
   },
 ];
-
-module.exports = {
-  validateSignup,
-  validateLogin,
-  validateProfileImage,
-  validateQueryString,
-  userExists,
-};
