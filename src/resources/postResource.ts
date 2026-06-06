@@ -1,10 +1,22 @@
-const {
+import {
   userResource,
-  userResourceArray,
-} = require("../resources/userResource");
+  type UserResourceData,
+} from "../resources/userResource.js";
 
-const postResource = (data) => {
-  const post = {
+interface PostResourceData {
+  id: number;
+  title: string;
+  content: string;
+  bannerImage: string;
+  likes: number;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author: UserResourceData | null;
+}
+
+export const postResource = (data: PostResourceData): PostResourceData => {
+  return {
     id: data.id,
     title: data.title,
     content: data.content,
@@ -15,27 +27,8 @@ const postResource = (data) => {
     updatedAt: data.updatedAt,
     author: data.author ? userResource(data.author) : null,
   };
-  return post;
 };
 
-const postResourceArray = (data) => {
-  const posts = data.map((post) => {
-    return {
-      id: post.id,
-      title: post.title,
-      content: post.content,
-      bannerImage: post.bannerImage,
-      likes: post.likes,
-      published: post.published,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      author: post.author ? userResource(post.author) : null,
-    };
-  });
-  return posts;
-};
-
-module.exports = {
-  postResource,
-  postResourceArray,
-};
+export const postResourceArray = (
+  data: PostResourceData[],
+): PostResourceData[] => data.map(postResource);
