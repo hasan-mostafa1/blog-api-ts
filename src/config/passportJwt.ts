@@ -1,14 +1,22 @@
-const passport = require("passport");
-const JwtStrategy = require("passport-jwt").Strategy;
-const ExtractJwt = require("passport-jwt").ExtractJwt;
-const { prisma } = require("../lib/prisma");
+import passport from "passport";
+import {
+  Strategy as JwtStrategy,
+  ExtractJwt,
+  type StrategyOptionsWithoutRequest,
+} from "passport-jwt";
+import { prisma } from "../lib/prisma.js";
 
-const options = {
+const options: StrategyOptionsWithoutRequest = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.TOKEN_SECRET,
+  secretOrKey: process.env.TOKEN_SECRET as string,
 };
 
-const strategy = new JwtStrategy(options, async (payload, done) => {
+interface Payload {
+  sub: number;
+  iat: number;
+}
+
+const strategy = new JwtStrategy(options, async (payload: Payload, done) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },

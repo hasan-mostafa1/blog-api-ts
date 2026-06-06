@@ -1,8 +1,8 @@
-const multer = require("multer");
-const path = require("node:path");
-const fs = require("node:fs/promises");
+import multer from "multer";
+import path from "node:path";
+import fs from "node:fs/promises";
 
-async function ensureFolder(folderPath) {
+async function ensureFolder(folderPath: string) {
   try {
     await fs.mkdir(folderPath, { recursive: true });
   } catch (e) {}
