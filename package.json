@@ -1,11 +1,12 @@
 {
-  "name": "backend-template",
+  "name": "blog-api-ts1",
   "version": "1.0.0",
   "description": "Backend template repo with frequently reused setup code to save time.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --watch ./app.js"
+    "dev": "tsx watch --import dotenv/config src/app.ts",
+    "build": "tsc",
+    "start": "node --import dotenv/config dist/app.js"
   },
   "repository": {
     "type": "git",
@@ -38,8 +39,12 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
+    "@types/passport": "^1.0.17",
+    "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.20.0",
     "prisma": "^7.5.0",
     "tsx": "^4.22.3",
