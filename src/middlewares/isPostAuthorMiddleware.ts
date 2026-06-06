@@ -1,4 +1,6 @@
-const isPostAuthor = (req, res, next) => {
+import type { Handler } from "express";
+
+const isPostAuthor: Handler = (req, res, next) => {
   if (req.user && req.post && req.user.id === req.post.authorId) {
     next();
   } else {

@@ -1,4 +1,6 @@
-const isAdmin = (req, res, next) => {
+import type { Handler } from "express";
+
+const isAdmin: Handler = (req, res, next) => {
   if (req.user && req.user.role === "ADMIN") {
     next();
   } else {
@@ -6,4 +8,4 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-module.exports = isAdmin;
+export default isAdmin;

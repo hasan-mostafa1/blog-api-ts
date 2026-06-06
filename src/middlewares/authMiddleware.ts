@@ -1,5 +1,7 @@
-const passport = require("passport");
+import type { Handler } from "express";
+import passport from "passport";
 
-const auth = (() => passport.authenticate("jwt", { session: false }))();
+const auth: () => void = (() =>
+  passport.authenticate("jwt", { session: false }))();
 
-module.exports = auth;
+export default auth;
