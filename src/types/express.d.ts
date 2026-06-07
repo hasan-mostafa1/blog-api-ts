@@ -1,18 +1,16 @@
-interface PostPayload {
-  id: number;
-  authorId: number;
-  title: string;
-}
+import type {
+  Comment,
+  Post,
+  User as PrismaUser,
+} from "../generated/prisma/client.ts";
 
 declare global {
   namespace Express {
-    interface User {
-      id: number;
-      role: "ADMIN" | "USER";
-    }
-
+    interface User extends PrismaUser {}
     interface Request {
-      post?: PostPayload;
+      post?: Post;
+      comment?: Comment;
+      selectedUser?: User;
     }
   }
 }
