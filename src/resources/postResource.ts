@@ -1,21 +1,26 @@
+import type { Post, User } from "../generated/prisma/client.js";
 import {
   userResource,
-  type UserResourceData,
+  type UserApiResponse,
 } from "../resources/userResource.js";
 
-interface PostResourceData {
+interface PostResourceData extends Post {
+  author?: User | null;
+}
+
+interface PostApiResponse {
   id: number;
   title: string;
   content: string;
-  bannerImage: string;
+  bannerImage: string | null;
   likes: number;
   published: boolean;
-  createdAt: string;
-  updatedAt: string;
-  author: UserResourceData | null;
+  createdAt: Date;
+  updatedAt: Date;
+  author: UserApiResponse | null;
 }
 
-export const postResource = (data: PostResourceData): PostResourceData => {
+export const postResource = (data: PostResourceData): PostApiResponse => {
   return {
     id: data.id,
     title: data.title,
@@ -31,4 +36,4 @@ export const postResource = (data: PostResourceData): PostResourceData => {
 
 export const postResourceArray = (
   data: PostResourceData[],
-): PostResourceData[] => data.map(postResource);
+): PostApiResponse[] => data.map(postResource);

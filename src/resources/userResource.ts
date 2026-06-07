@@ -1,4 +1,8 @@
-export interface UserResourceData {
+import type { User } from "../generated/prisma/client.js";
+
+export interface UserResourceData extends User {}
+
+export interface UserApiResponse {
   id: number;
   firstName: string;
   lastName: string;
@@ -6,7 +10,7 @@ export interface UserResourceData {
   profileImage: string | null;
 }
 
-export const userResource = (data: UserResourceData): UserResourceData => {
+export const userResource = (data: UserResourceData): UserApiResponse => {
   return {
     id: data.id,
     firstName: data.firstName,
@@ -18,4 +22,4 @@ export const userResource = (data: UserResourceData): UserResourceData => {
 
 export const userResourceArray = (
   data: UserResourceData[],
-): UserResourceData[] => data.map(userResource);
+): UserApiResponse[] => data.map(userResource);
