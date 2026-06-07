@@ -1,23 +1,32 @@
-const auth = require("../../middlewares/authMiddleware");
-const isAdmin = require("../../middlewares/isAdminMiddleware");
-const { prisma } = require("../../lib/prisma");
-const {
+import auth from "../../middlewares/authMiddleware.js";
+import isAdmin from "../../middlewares/isAdminMiddleware.js";
+import { prisma } from "../../lib/prisma.js";
+import {
   commentResource,
   commentResourceArray,
-} = require("../../resources/commentResource");
-const commentValidator = require("../../validators/commentValidator");
-const postValidator = require("../../validators/postValidator");
-const { matchedData } = require("express-validator");
+} from "../../resources/commentResource.js";
+import * as commentValidator from "../../validators/commentValidator.js";
+import * as postValidator from "../../validators/postValidator.js";
+import { matchedData } from "express-validator";
+import type { Request, Response } from "express";
+import type { Prisma } from "../../generated/prisma/client.js";
 
-module.exports.index = [
+export const index = [
   auth,
   isAdmin,
-  commentValidator.validateQueryString,
-  postValidator.publishedPostExists,
-  async (req, res) => {
+  ...commentValidator.validateQueryString,
+  ...postValidator.publishedPostExists,
+  async (req: Request, res: Response) => {
     // Filtering
-    const { content, sort, page, limit } = matchedData(req);
-    const whereClause = { postId: req.post.id };
+    const { content, sort, page, limit } = matchedData(req) as {
+      content?: string;
+      sort?: string;
+      page?: number;
+      limit?: number;
+    };
+    const whereClause: Prisma.CommentWhereInput = {
+      postId: req.post?.id as number,
+    };
 
     if (content) {
       whereClause.content = {
@@ -26,7 +35,7 @@ module.exports.index = [
       };
     }
     // Sorting
-    let sortList = [
+    let sortList: Prisma.CommentOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -34,8 +43,8 @@ module.exports.index = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
-        let order;
+      sortQuery.split(",").forEach((item: string) => {
+        let order: Prisma.SortOrder;
         if (item.at(0) === "-") {
           order = "desc";
         } else {
@@ -77,16 +86,16 @@ module.exports.index = [
   },
 ];
 
-module.exports.update = [
+export const update = [
   auth,
   isAdmin,
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  commentValidator.validateComment,
-  async (req, res) => {
-    const { content } = matchedData(req);
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  ...commentValidator.validateComment,
+  async (req: Request, res: Response) => {
+    const { content } = matchedData(req) as { content: string };
     const comment = await prisma.comment.update({
-      where: { id: req.comment.id },
+      where: { id: req.comment!.id },
       data: {
         content: content,
       },
@@ -99,19 +108,19 @@ module.exports.update = [
   },
 ];
 
-module.exports.destroy = [
+export const destroy = [
   auth,
   isAdmin,
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  async (req, res) => {
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  async (req: Request, res: Response) => {
     await prisma.$transaction(async (tx) => {
       await tx.comment.deleteMany({
-        where: { parentId: req.comment.id },
+        where: { parentId: req.comment!.id },
       });
 
       await tx.comment.delete({
-        where: { id: req.comment.id },
+        where: { id: req.comment!.id },
       });
     });
 

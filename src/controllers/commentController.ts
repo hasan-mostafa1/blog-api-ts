@@ -1,20 +1,28 @@
-const { prisma } = require("../lib/prisma");
-const auth = require("../middlewares/authMiddleware");
-const {
+import { prisma } from "../lib/prisma.js";
+import auth from "../middlewares/authMiddleware.js";
+import {
   commentResource,
   commentResourceArray,
-} = require("../resources/commentResource");
-const commentValidator = require("../validators/commentValidator");
-const postValidator = require("../validators/postValidator");
-const { matchedData } = require("express-validator");
+} from "../resources/commentResource.js";
+import * as commentValidator from "../validators/commentValidator.js";
+import * as postValidator from "../validators/postValidator.js";
+import { matchedData } from "express-validator";
+import type { Request, RequestHandler, Response } from "express";
+import type { Prisma } from "../generated/prisma/client.js";
 
-module.exports.index = [
-  commentValidator.validateQueryString,
-  postValidator.publishedPostExists,
-  async (req, res) => {
+export const index = [
+  ...commentValidator.validateQueryString,
+  ...postValidator.publishedPostExists,
+  async (req: Request, res: Response) => {
     // Filtering
-    const { content, sort, page, limit } = matchedData(req);
-    const whereClause = { postId: req.post.id };
+    const { content, sort, page, limit } = matchedData(req) as {
+      content: string;
+      sort?: string;
+      page?: number;
+      limit?: number;
+    };
+
+    const whereClause: Prisma.CommentWhereInput = { postId: req.post!.id };
 
     if (content) {
       whereClause.content = {
@@ -23,7 +31,7 @@ module.exports.index = [
       };
     }
     // Sorting
-    let sortList = [
+    let sortList: Prisma.CommentOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -31,7 +39,7 @@ module.exports.index = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
+      sortQuery.split(",").forEach((item: string) => {
         let order;
         if (item.at(0) === "-") {
           order = "desc";
@@ -75,20 +83,22 @@ module.exports.index = [
   },
 ];
 
-module.exports.store = [
+export const store = [
   auth,
-  postValidator.publishedPostExists,
-  commentValidator.validateComment,
-  async (req, res) => {
-    const { content } = matchedData(req);
+  ...postValidator.publishedPostExists,
+  ...commentValidator.validateComment,
+  async (req: Request, res: Response) => {
+    const { content } = matchedData(req) as {
+      content: string;
+    };
     const comment = await prisma.comment.create({
       data: {
         content: content,
         post: {
-          connect: { id: req.post.id },
+          connect: { id: req.post!.id },
         },
         author: {
-          connect: { id: req.user.id },
+          connect: { id: req.user!.id },
         },
       },
     });
@@ -100,18 +110,20 @@ module.exports.store = [
   },
 ];
 
-module.exports.update = [
+export const update = [
   auth,
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  commentValidator.validateComment,
-  async (req, res) => {
-    if (req.user.id !== req.comment.authorId) {
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  ...commentValidator.validateComment,
+  async (req: Request, res: Response) => {
+    if (req.user?.id !== req.comment?.authorId) {
       return res.status(403).json({ msg: "Unauthorized action!" });
     }
-    const { content } = matchedData(req);
+    const { content } = matchedData(req) as {
+      content: string;
+    };
     const comment = await prisma.comment.update({
-      where: { id: req.comment.id },
+      where: { id: req.comment!.id },
       data: {
         content: content,
       },
@@ -124,33 +136,33 @@ module.exports.update = [
   },
 ];
 
-module.exports.destroy = [
+export const destroy = [
   auth,
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  async (req, res) => {
-    if (req.user.id !== req.comment.authorId) {
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  async (req: Request, res: Response) => {
+    if (req.user?.id !== req.comment?.authorId) {
       return res.status(403).json({ msg: "Unauthorized action!" });
     }
     await prisma.$transaction(async (tx) => {
       await tx.comment.deleteMany({
-        where: { parentId: req.comment.id },
+        where: { parentId: req.comment!.id },
       });
 
       await tx.comment.delete({
-        where: { id: req.comment.id },
+        where: { id: req.comment!.id },
       });
     });
     res.sendStatus(204);
   },
 ];
 
-module.exports.increaseLikes = [
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  async (req, res) => {
+export const increaseLikes = [
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  async (req: Request, res: Response) => {
     await prisma.comment.update({
-      where: { id: req.comment.id },
+      where: { id: req.comment!.id },
       data: {
         likes: {
           increment: 1,
@@ -161,13 +173,13 @@ module.exports.increaseLikes = [
   },
 ];
 
-module.exports.decreaseLikes = [
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  async (req, res) => {
-    if (req.comment.likes > 0) {
+export const decreaseLikes = [
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  async (req: Request, res: Response) => {
+    if (req.comment!.likes > 0) {
       await prisma.comment.update({
-        where: { id: req.comment.id },
+        where: { id: req.comment!.id },
         data: {
           likes: {
             decrement: 1,
@@ -179,14 +191,22 @@ module.exports.decreaseLikes = [
   },
 ];
 
-module.exports.getReplies = [
-  commentValidator.validateQueryString,
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  async (req, res) => {
+export const getReplies = [
+  ...commentValidator.validateQueryString,
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  async (req: Request, res: Response) => {
     // Filtering
-    const { content, sort, page, limit } = matchedData(req);
-    const whereClause = { postId: req.post.id, parentId: req.comment.id };
+    const { content, sort, page, limit } = matchedData(req) as {
+      content: string;
+      sort?: string;
+      page?: number;
+      limit?: number;
+    };
+    const whereClause: Prisma.CommentWhereInput = {
+      postId: req.post!.id,
+      parentId: req.comment!.id,
+    };
 
     if (content) {
       whereClause.content = {
@@ -195,7 +215,7 @@ module.exports.getReplies = [
       };
     }
     // Sorting
-    let sortList = [
+    let sortList: Prisma.CommentOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -203,7 +223,7 @@ module.exports.getReplies = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
+      sortQuery.split(",").forEach((item: string) => {
         let order;
         if (item.at(0) === "-") {
           order = "desc";
@@ -246,24 +266,24 @@ module.exports.getReplies = [
   },
 ];
 
-module.exports.addReply = [
+export const addReply = [
   auth,
-  postValidator.publishedPostExists,
-  commentValidator.commentExists,
-  commentValidator.validateComment,
-  async (req, res) => {
+  ...postValidator.publishedPostExists,
+  ...commentValidator.commentExists,
+  ...commentValidator.validateComment,
+  async (req: Request, res: Response) => {
     const { content } = matchedData(req);
     const comment = await prisma.comment.create({
       data: {
         content: content,
         post: {
-          connect: { id: req.post.id },
+          connect: { id: req.post!.id },
         },
         author: {
-          connect: { id: req.user.id },
+          connect: { id: req.user!.id },
         },
         parent: {
-          connect: { id: req.comment.id },
+          connect: { id: req.comment!.id },
         },
       },
     });

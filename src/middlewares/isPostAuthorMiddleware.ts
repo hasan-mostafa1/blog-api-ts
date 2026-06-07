@@ -8,4 +8,4 @@ const isPostAuthor: Handler = (req, res, next) => {
   }
 };
 
-module.exports = isPostAuthor;
+export default isPostAuthor;

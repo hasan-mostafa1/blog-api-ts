@@ -1,22 +1,29 @@
-const { matchedData } = require("express-validator");
-const { prisma } = require("../../lib/prisma");
-const auth = require("../../middlewares/authMiddleware");
-const isAdmin = require("../../middlewares/isAdminMiddleware");
-const {
+import { matchedData } from "express-validator";
+import { prisma } from "../../lib/prisma.js";
+import auth from "../../middlewares/authMiddleware.js";
+import isAdmin from "../../middlewares/isAdminMiddleware.js";
+import {
   userResource,
   userResourceArray,
-} = require("../../resources/userResource");
-const userValidator = require("../../validators/userValidator");
-const fs = require("node:fs/promises");
-
-module.exports.index = [
+} from "../../resources/userResource.js";
+import * as userValidator from "../../validators/userValidator.js";
+import fs from "node:fs/promises";
+import type { Request, Response } from "express";
+import type { Prisma } from "../../generated/prisma/client.js";
+export const index = [
   auth,
   isAdmin,
-  userValidator.validateQueryString,
-  async (req, res) => {
+  ...userValidator.validateQueryString,
+  async (req: Request, res: Response) => {
     // Filtering
-    const { sq, role, sort, page, limit } = matchedData(req);
-    const whereClause = {};
+    const { sq, role, sort, page, limit } = matchedData(req) as {
+      sq?: string;
+      role: "ADMIN" | "USER";
+      sort?: string;
+      page?: number;
+      limit?: number;
+    };
+    const whereClause: Prisma.UserWhereInput = {};
 
     if (sq) {
       whereClause.OR = [
@@ -46,7 +53,7 @@ module.exports.index = [
     }
 
     // Sorting
-    let sortList = [
+    let sortList: Prisma.UserOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -54,7 +61,7 @@ module.exports.index = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
+      sortQuery.split(",").forEach((item: string) => {
         let order;
         if (item.at(0) === "-") {
           order = "desc";
@@ -96,26 +103,26 @@ module.exports.index = [
   },
 ];
 
-module.exports.show = [
+export const show = [
   auth,
   isAdmin,
-  userValidator.userExists,
-  async (req, res) => {
+  ...userValidator.userExists,
+  async (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
-      data: userResource(req.selectedUser),
+      data: userResource(req.selectedUser!),
     });
   },
 ];
 
-module.exports.destroy = [
+export const destroy = [
   auth,
   isAdmin,
-  userValidator.userExists,
-  async (req, res) => {
-    const profileImagePath = req.selectedUser.profileImage;
+  ...userValidator.userExists,
+  async (req: Request, res: Response) => {
+    const profileImagePath = req.selectedUser?.profileImage;
     await prisma.user.delete({
-      where: { id: req.selectedUser.id },
+      where: { id: req.selectedUser!.id },
     });
     if (profileImagePath) {
       await fs.unlink(profileImagePath);

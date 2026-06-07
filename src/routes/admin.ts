@@ -1,7 +1,8 @@
-const { Router } = require("express");
-const userController = require("../controllers/admin/userController");
-const postController = require("../controllers/admin/postController");
-const commentController = require("../controllers/admin/commentController");
+import { Router } from "express";
+import * as userController from "../controllers/admin/userController.js";
+import * as postController from "../controllers/admin/postController.js";
+import * as commentController from "../controllers/admin/commentController.js";
+
 const router = Router();
 
 // Users
@@ -21,4 +22,4 @@ router.get("/posts/:postId/comments", commentController.index);
 router.put("/posts/:postId/comments/:commentId", commentController.update);
 router.delete("/posts/:postId/comments/:commentId", commentController.destroy);
 
-module.exports = router;
+export default router;

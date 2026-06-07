@@ -10,7 +10,8 @@ async function ensureFolder(folderPath: string) {
 
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const storagePath = path.join(__dirname, "../public/uploads/profiles");
+    const storagePath = path.join(process.cwd(), "public/uploads/profiles");
+    console.log(storagePath);
     await ensureFolder(storagePath);
     cb(null, storagePath);
   },
@@ -25,4 +26,4 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-module.exports = upload;
+export default upload;

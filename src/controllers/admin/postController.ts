@@ -1,23 +1,32 @@
-const upload = require("../../config/multer");
-const { prisma } = require("../../lib/prisma");
-const auth = require("../../middlewares/authMiddleware");
-const isAdmin = require("../../middlewares/isAdminMiddleware");
-const {
+import upload from "../../config/multer.js";
+import { prisma } from "../../lib/prisma.js";
+import auth from "../../middlewares/authMiddleware.js";
+import isAdmin from "../../middlewares/isAdminMiddleware.js";
+import {
   postResource,
   postResourceArray,
-} = require("../../resources/postResource");
-const postValidator = require("../../validators/postValidator");
-const fs = require("node:fs/promises");
-const { matchedData } = require("express-validator");
+} from "../../resources/postResource.js";
+import * as postValidator from "../../validators/postValidator.js";
+import fs from "node:fs/promises";
+import { matchedData } from "express-validator";
+import type { Request, Response } from "express";
+import type { Prisma } from "../../generated/prisma/client.js";
+import path from "node:path";
 
-module.exports.index = [
+export const index = [
   auth,
   isAdmin,
-  postValidator.validateQueryString,
-  async (req, res) => {
+  ...postValidator.validateQueryString,
+  async (req: Request, res: Response) => {
     // Filtering
-    const { sq, authorId, sort, page, limit } = matchedData(req);
-    const whereClause = {};
+    const { sq, authorId, sort, page, limit } = matchedData(req) as {
+      sq?: string;
+      authorId: number;
+      sort?: string;
+      page?: number;
+      limit?: number;
+    };
+    const whereClause: Prisma.PostWhereInput = {};
 
     if (sq) {
       whereClause.OR = [
@@ -41,7 +50,7 @@ module.exports.index = [
     }
 
     // Sorting
-    let sortList = [
+    let sortList: Prisma.PostOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -49,7 +58,7 @@ module.exports.index = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
+      sortQuery.split(",").forEach((item: string) => {
         let order;
         if (item.at(0) === "-") {
           order = "desc";
@@ -92,21 +101,28 @@ module.exports.index = [
   },
 ];
 
-module.exports.store = [
+export const store = [
   auth,
   isAdmin,
   upload.single("bannerImage"),
-  postValidator.validatePost,
-  async (req, res) => {
-    const { title, content, published } = matchedData(req);
+  ...postValidator.validatePost,
+  async (req: Request, res: Response) => {
+    const { title, content, published } = matchedData(req) as {
+      title: string;
+      content: string;
+      published: boolean;
+    };
+
+    const bannerImage = req.file ? req.file.filename : null;
+
     const post = await prisma.post.create({
       data: {
         title: title,
         content: content,
-        bannerImage: req.file?.filename,
+        bannerImage: bannerImage,
         published: published,
         author: {
-          connect: { id: req.user.id },
+          connect: { id: req.user!.id },
         },
       },
     });
@@ -118,28 +134,28 @@ module.exports.store = [
   },
 ];
 
-module.exports.show = [
+export const show = [
   auth,
   isAdmin,
-  postValidator.postExists,
-  async (req, res) => {
+  ...postValidator.postExists,
+  async (req: Request, res: Response) => {
     const post = req.post;
     res.status(200).json({
       success: true,
-      data: postResource(post),
+      data: postResource(post!),
     });
   },
 ];
 
-module.exports.update = [
+export const update = [
   auth,
   isAdmin,
-  postValidator.postExists,
+  ...postValidator.postExists,
   upload.single("bannerImage"),
-  postValidator.validatePost,
-  async (req, res) => {
+  ...postValidator.validatePost,
+  async (req: Request, res: Response) => {
     const { title, content, published } = matchedData(req);
-    let bannerImageName = req.post.bannerImage;
+    let bannerImageName = req.post ? req.post.bannerImage : null;
     if (req.file) {
       bannerImageName = req.file.filename;
     } else if (req.body.bannerImage === null || req.body.bannerImage === "") {
@@ -147,7 +163,7 @@ module.exports.update = [
     }
 
     const post = await prisma.post.update({
-      where: { id: req.post.id },
+      where: { id: req.post!.id },
       data: {
         title: title,
         content: content,
@@ -157,13 +173,13 @@ module.exports.update = [
     });
 
     if (
-      req.post.bannerImage &&
+      req.post?.bannerImage &&
       (req.file || req.body.bannerImage === null || req.body.bannerImage === "")
     ) {
       const bannerImagePath = path.join(
-        __dirname,
-        "../public/uploads/profiles",
-        req.user.bannerImage,
+        process.cwd(),
+        "/public/uploads/profiles",
+        req.post.bannerImage,
       );
       await fs.unlink(bannerImagePath);
     }
@@ -175,17 +191,20 @@ module.exports.update = [
   },
 ];
 
-module.exports.destroy = [
+export const destroy = [
   auth,
   isAdmin,
-  postValidator.postExists,
-  async (req, res) => {
-    const bannerImagePath = path.join(
-      __dirname,
-      "../public/uploads/profiles",
-      req.post.bannerImage,
-    );
-    const { postId } = matchedData(req);
+  ...postValidator.postExists,
+  async (req: Request, res: Response) => {
+    let bannerImagePath: string | null = null;
+    if (req.post?.bannerImage) {
+      bannerImagePath = path.join(
+        process.cwd(),
+        "/public/uploads/profiles",
+        req.post.bannerImage,
+      );
+    }
+    const { postId } = matchedData(req) as { postId: number };
     await prisma.post.delete({
       where: { id: postId },
     });

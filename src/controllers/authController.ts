@@ -1,18 +1,24 @@
-const { matchedData } = require("express-validator");
-const bcrypt = require("bcryptjs");
-const { prisma } = require("../lib/prisma");
-const auth = require("../middlewares/authMiddleware");
-const userValidator = require("../validators/userValidator");
-const utils = require("../lib/utils");
-const { userResource } = require("../resources/userResource");
-const upload = require("../config/multer");
-const fs = require("node:fs/promises");
-const path = require("node:path");
+import { matchedData } from "express-validator";
+import bcrypt from "bcryptjs";
+import { prisma } from "../lib/prisma.js";
+import auth from "../middlewares/authMiddleware.js";
+import * as userValidator from "../validators/userValidator.js";
+import * as utils from "../lib/utils.js";
+import { userResource } from "../resources/userResource.js";
+import upload from "../config/multer.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { Request, Response } from "express";
 
-module.exports.signup = [
-  userValidator.validateSignup,
-  async (req, res) => {
-    const { firstName, lastName, email, password } = matchedData(req);
+export const signup = [
+  ...userValidator.validateSignup,
+  async (req: Request, res: Response) => {
+    const { firstName, lastName, email, password } = matchedData(req) as {
+      firstName: string;
+      lastName: string;
+      email: string;
+      password: string;
+    };
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -33,10 +39,13 @@ module.exports.signup = [
   },
 ];
 
-module.exports.login = [
-  userValidator.validateLogin,
-  async (req, res) => {
-    const { email, password } = matchedData(req);
+export const login = [
+  ...userValidator.validateLogin,
+  async (req: Request, res: Response) => {
+    const { email, password } = matchedData(req) as {
+      email: string;
+      password: string;
+    };
     const user = await prisma.user.findUnique({
       where: { email: email },
     });
@@ -64,25 +73,29 @@ module.exports.login = [
   },
 ];
 
-module.exports.showProfile = [
+export const showProfile = [
   auth,
-  (req, res) => res.status(200).json({ user: userResource(req.user) }),
+  (req: Request, res: Response) =>
+    res.status(200).json({ user: userResource(req.user!) }),
 ];
 
-module.exports.updateProfileImage = [
+export const updateProfileImage = [
   auth,
   upload.single("profileImage"),
-  userValidator.validateProfileImage,
-  async (req, res) => {
-    const oldFilePath = path.join(
-      __dirname,
-      "../public/uploads/profiles",
-      req.user.profileImage,
-    );
+  ...userValidator.validateProfileImage,
+  async (req: Request, res: Response) => {
+    let oldFilePath: string | null = null;
+    if (req.user?.profileImage) {
+      oldFilePath = path.join(
+        process.cwd(),
+        "public/uploads/profiles",
+        req.user.profileImage,
+      );
+    }
     const user = await prisma.user.update({
-      where: { id: req.user.id },
+      where: { id: req.user!.id },
       data: {
-        profileImage: req.file.filename,
+        profileImage: req.file!.filename,
       },
     });
     // Delete uploaded file if validation fails

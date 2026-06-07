@@ -1,22 +1,27 @@
-const { matchedData } = require("express-validator");
-const { prisma } = require("../lib/prisma");
-const {
-  postResource,
-  postResourceArray,
-} = require("../resources/postResource");
-const postValidator = require("../validators/postValidator");
-const upload = require("../config/multer");
-const auth = require("../middlewares/authMiddleware");
-const isPostAuthor = require("../middlewares/isPostAuthorMiddleware");
-const fs = require("node:fs/promises");
-const path = require("node:path");
+import { matchedData } from "express-validator";
+import { prisma } from "../lib/prisma.js";
+import { postResource, postResourceArray } from "../resources/postResource.js";
+import * as postValidator from "../validators/postValidator.js";
+import upload from "../config/multer.js";
+import auth from "../middlewares/authMiddleware.js";
+import isPostAuthor from "../middlewares/isPostAuthorMiddleware.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { Request, RequestHandler, Response } from "express";
+import type { Post, Prisma } from "../generated/prisma/client.js";
 
-module.exports.index = [
-  postValidator.validateQueryString,
-  async (req, res) => {
+export const index = [
+  ...postValidator.validateQueryString,
+  async (req: Request, res: Response) => {
     // Filtering
-    const { sq, authorId, sort, page, limit } = matchedData(req);
-    const whereClause = { published: true };
+    const { sq, authorId, sort, page, limit } = matchedData(req) as {
+      sq?: string;
+      authorId: number;
+      sort?: string;
+      page?: number;
+      limit?: number;
+    };
+    const whereClause: Prisma.PostWhereInput = { published: true };
 
     if (sq) {
       whereClause.OR = [
@@ -40,7 +45,7 @@ module.exports.index = [
     }
 
     // Sorting
-    let sortList = [
+    let sortList: Prisma.PostOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -48,7 +53,7 @@ module.exports.index = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
+      sortQuery.split(",").forEach((item: string) => {
         let order;
         if (item.at(0) === "-") {
           order = "desc";
@@ -59,7 +64,7 @@ module.exports.index = [
           [item.slice(1)]: order,
         });
       });
-      req.query.page = 1;
+      // req.query.page = 1;
     }
     // Pagination
     const currentPage = page || 1;
@@ -91,13 +96,13 @@ module.exports.index = [
   },
 ];
 
-module.exports.myPosts = [
+export const myPosts = [
   auth,
-  postValidator.validateQueryString,
-  async (req, res) => {
+  ...postValidator.validateQueryString,
+  async (req: Request, res: Response) => {
     // Filtering
     const { sq, sort, page, limit } = matchedData(req);
-    const whereClause = { authorId: req.user.id };
+    const whereClause: Prisma.PostWhereInput = { authorId: req.user!.id };
 
     if (sq) {
       whereClause.OR = [
@@ -117,7 +122,7 @@ module.exports.myPosts = [
     }
 
     // Sorting
-    let sortList = [
+    let sortList: Prisma.PostOrderByWithRelationInput[] = [
       {
         id: "asc",
       },
@@ -125,7 +130,7 @@ module.exports.myPosts = [
     if (sort) {
       sortList = [];
       const sortQuery = sort;
-      sortQuery.split(",").forEach((item) => {
+      sortQuery.split(",").forEach((item: string) => {
         let order;
         if (item.at(0) === "-") {
           order = "desc";
@@ -136,7 +141,7 @@ module.exports.myPosts = [
           [item.slice(1)]: order,
         });
       });
-      req.query.page = 1;
+      // req.query.page = 1;
     }
     // Pagination
     const currentPage = page || 1;
@@ -168,20 +173,24 @@ module.exports.myPosts = [
   },
 ];
 
-module.exports.store = [
+export const store = [
   auth,
   upload.single("bannerImage"),
-  postValidator.validatePost,
-  async (req, res) => {
-    const { title, content, published } = matchedData(req);
+  ...postValidator.validatePost,
+  async (req: Request, res: Response) => {
+    const { title, content, published } = matchedData(req) as {
+      title: string;
+      content: string;
+      published: boolean;
+    };
     const post = await prisma.post.create({
       data: {
         title: title,
         content: content,
-        bannerImage: req.file?.filename,
+        bannerImage: req.file ? req.file.filename : null,
         published: published,
         author: {
-          connect: { id: req.user.id },
+          connect: { id: req.user!.id },
         },
       },
     });
@@ -193,26 +202,30 @@ module.exports.store = [
   },
 ];
 
-module.exports.show = [
-  postValidator.publishedPostExists,
-  async (req, res) => {
+export const show = [
+  ...postValidator.publishedPostExists,
+  async (req: Request, res: Response) => {
     const post = req.post;
     res.status(200).json({
       success: true,
-      data: postResource(post),
+      data: postResource(post!),
     });
   },
 ];
 
-module.exports.update = [
+export const update = [
   auth,
-  postValidator.postExists,
+  ...postValidator.postExists,
   isPostAuthor,
   upload.single("bannerImage"),
-  postValidator.validatePost,
-  async (req, res) => {
-    const { title, content, published } = matchedData(req);
-    let bannerImageName = req.post.bannerImage;
+  ...postValidator.validatePost,
+  async (req: Request, res: Response) => {
+    const { title, content, published } = matchedData(req) as {
+      title: string;
+      content: string;
+      published: boolean;
+    };
+    let bannerImageName = req.post ? req.post.bannerImage : null;
     if (req.file) {
       bannerImageName = req.file.filename;
     } else if (req.body.bannerImage === null || req.body.bannerImage === "") {
@@ -220,7 +233,7 @@ module.exports.update = [
     }
 
     const post = await prisma.post.update({
-      where: { id: req.post.id },
+      where: { id: req.post!.id },
       data: {
         title: title,
         content: content,
@@ -230,13 +243,13 @@ module.exports.update = [
     });
 
     if (
-      req.post.bannerImage &&
+      req.post?.bannerImage &&
       (req.file || req.body.bannerImage === null || req.body.bannerImage === "")
     ) {
       const bannerImagePath = path.join(
-        __dirname,
-        "../public/uploads/profiles",
-        req.user.bannerImage,
+        process.cwd(),
+        "/public/uploads/profiles",
+        req.post.bannerImage,
       );
       await fs.unlink(bannerImagePath);
     }
@@ -248,17 +261,22 @@ module.exports.update = [
   },
 ];
 
-module.exports.destroy = [
+export const destroy = [
   auth,
-  postValidator.postExists,
+  ...postValidator.postExists,
   isPostAuthor,
-  async (req, res) => {
-    const bannerImagePath = path.join(
-      __dirname,
-      "../public/uploads/profiles",
-      req.post.bannerImage,
-    );
-    const { postId } = matchedData(req);
+  async (req: Request, res: Response) => {
+    let bannerImagePath: string | null = null;
+    if (req.post?.bannerImage) {
+      bannerImagePath = path.join(
+        process.cwd(),
+        "/public/uploads/profiles",
+        req.post.bannerImage,
+      );
+    }
+    const { postId } = matchedData(req) as {
+      postId: number;
+    };
     await prisma.post.delete({
       where: { id: postId },
     });
@@ -269,11 +287,11 @@ module.exports.destroy = [
   },
 ];
 
-module.exports.increaseLikes = [
-  postValidator.publishedPostExists,
-  async (req, res) => {
+export const increaseLikes = [
+  ...postValidator.publishedPostExists,
+  async (req: Request, res: Response) => {
     const post = await prisma.post.update({
-      where: { id: req.post.id },
+      where: { id: req.post!.id },
       data: {
         likes: {
           increment: 1,
@@ -290,13 +308,13 @@ module.exports.increaseLikes = [
   },
 ];
 
-module.exports.decreaseLikes = [
-  postValidator.publishedPostExists,
-  async (req, res) => {
-    let post;
-    if (req.post.likes > 0) {
+export const decreaseLikes = [
+  ...postValidator.publishedPostExists,
+  async (req: Request, res: Response) => {
+    let post: Post = req.post!;
+    if (req.post!.likes > 0) {
       post = await prisma.post.update({
-        where: { id: req.post.id },
+        where: { id: req.post!.id },
         data: {
           likes: {
             decrement: 1,

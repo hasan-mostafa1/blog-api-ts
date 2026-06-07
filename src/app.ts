@@ -1,12 +1,10 @@
-require("dotenv").config();
-const express = require("express");
-const session = require("express-session");
-const cors = require("cors");
-const path = require("node:path");
-const errorMiddleware = require("./middlewares/errorMiddleware");
-const webRouter = require("./routes/web");
-const apiRouter = require("./routes/api");
-const adminRouter = require("./routes/admin");
+import express from "express";
+import cors from "cors";
+import path from "node:path";
+import errorMiddleware from "./middlewares/errorMiddleware.js";
+import webRouter from "./routes/web.js";
+import apiRouter from "./routes/api.js";
+import adminRouter from "./routes/admin.js";
 
 /**
  * -------------- GENERAL SETUP ----------------
@@ -14,7 +12,7 @@ const adminRouter = require("./routes/admin");
 
 const app = express();
 
-const assetsPath = path.join(__dirname, "public");
+const assetsPath = path.join(process.cwd(), "public");
 app.use(express.static(assetsPath));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +23,7 @@ app.use(cors());
  */
 
 // Passport JWT strategy
-require("./config/passportJwt");
+import "./config/passportJwt.js";
 
 /**
  * -------------- ROUTES ----------------
@@ -57,6 +55,6 @@ app.listen(PORT, (err) => {
 /**
  * -------------- SETTINGS ----------------
  */
-const viewsPath = path.join(__dirname, "views");
+const viewsPath = path.join(process.cwd(), "src/views");
 app.set("views", viewsPath);
 app.set("view engine", "ejs");

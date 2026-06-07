@@ -1,7 +1,7 @@
-const { Router } = require("express");
-const authController = require("../controllers/authController");
-const postController = require("../controllers/postController");
-const commentController = require("../controllers/commentController");
+import { Router } from "express";
+import * as authController from "../controllers/authController.js";
+import * as postController from "../controllers/postController.js";
+import * as commentController from "../controllers/commentController.js";
 
 const router = Router();
 
@@ -43,4 +43,4 @@ router.patch(
   commentController.decreaseLikes,
 );
 
-module.exports = router;
+export default router;
